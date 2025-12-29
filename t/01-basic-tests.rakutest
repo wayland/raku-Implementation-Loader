@@ -5,9 +5,9 @@ use	v6.d;
 use	lib 't/lib';
 
 use	Test;
-use	Abstract::Factory::Helper;
+use	Implementation::Loader;
 
-class Foo does Abstract::Factory::Helper {}
+class Foo does Implementation::Loader {}
 
 my $loader = Foo.new();
 my ($passes, $fails) = $loader.load-module-pattern(

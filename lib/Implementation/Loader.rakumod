@@ -3,7 +3,7 @@ use	v6.d;
 use	Glob::Grammar;
 use	Glob::ToRegexActions;
 
-role	Abstract::Factory::Helper {
+role	Implementation::Loader {
 	has	Lock	%!library-locks;
 
 	=begin pod
@@ -97,3 +97,4 @@ role	Abstract::Factory::Helper {
 		return %passes, %fails;
 	}
 } # End Loader
+

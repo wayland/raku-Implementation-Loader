@@ -8,10 +8,10 @@
   ],
   "description": "Will dynamically create classes with the same name as the modules.  Modules can be specified with the glob language",
   "license": "Artistic-2.0",
-  "name": "Abstract::Factory::Helper",
+  "name": "Implementation::Loader",
   "perl": "v6.d",
   "provides": {
-    "Abstract::Factory::Helper": "lib/Abstract/Factory/Helper.rakumod"
+    "Implementation::Loader": "lib/Implementation/Loader.rakumod"
   },
   "resources": [
   ],
