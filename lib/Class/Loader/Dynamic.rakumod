@@ -47,7 +47,8 @@ role	Class::Loader::Dynamic {
 		my @installed = $*REPO.repo-chain
 			.grep(*.^can('installed'))
 			.map(*.installed)
-			.flat.map(*.meta<name>);
+			.flat.map(*.meta<name>)
+			.grep(*.^name eq 'Str');
 
 		my @all-mods = (@lib-mods, @installed).flat.unique.sort;
 		return @all-mods;
