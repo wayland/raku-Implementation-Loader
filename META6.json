@@ -8,14 +8,14 @@
   ],
   "description": "Will dynamically create classes with the same name as the modules.  Modules can be specified with the glob language",
   "license": "Artistic-2.0",
-  "name": "Class::Loader::Dynamic",
+  "name": "Abstract::Factory::Helper",
   "perl": "v6.d",
   "provides": {
-    "Class::Loader::Dynamic": "lib/Class/Loader/Dynamic.rakumod"
+    "Abstract::Factory::Helper": "lib/Abstract/Factory/Helper.rakumod"
   },
   "resources": [
   ],
-  "source-url": "https://github.com/wayland/Class-Loader-Dynamic.git",
+  "source-url": "https://github.com/wayland/raku-Abstract-Factory-Helper.git",
   "test-depends": [
   ],
   "version": "0.0.6"

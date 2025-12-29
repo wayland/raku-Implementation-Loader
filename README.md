@@ -1,13 +1,13 @@
-# Class::Loader::Dynamic
+# Abstract::Factory::Helper
 
 Will dynamically create classes with the same name as the modules.  Modules can be specified with the glob language.
 
 # Primary use: .load-module-pattern()
 
 ```
-use	Class::Loader::Dynamic;
+use	Abstract::Factory::Helper;
 
-class Foo does Class::Loader::Dynamic {}
+class Foo does Abstract::Factory::Helper {}
 
 my $loader = Foo.new();
 my ($passes, $fails) = $loader.load-module-pattern(

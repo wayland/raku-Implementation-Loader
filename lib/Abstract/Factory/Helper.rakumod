@@ -3,7 +3,7 @@ use	v6.d;
 use	Glob::Grammar;
 use	Glob::ToRegexActions;
 
-role	Class::Loader::Dynamic {
+role	Abstract::Factory::Helper {
 	has	Lock	%!library-locks;
 
 	=begin pod
