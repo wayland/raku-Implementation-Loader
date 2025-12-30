@@ -4,29 +4,69 @@ use	Glob::Grammar;
 use	Glob::ToRegexActions;
 
 role	Implementation::Loader {
+	has	Lock	%!load-locks;
 	has	Lock	%!library-locks;
 
 	=begin pod
 
 	=head1 method load-library
 
-	method	load-library(Str :$type = 'Database::Storage::Memory', *%parameters)
+	method	load-library(
+		Str :$type,		     # The type to load, as a string
+		Str :$module-name,   # The module to load, as a string; defaults to $type
+		Str :$does,          # When the type is loaded, check if it does this role
+		Bool :$return-type = False, # Return the type object instead of an instance
+		*%parameters            # Additional parameters to pass to the type's .new() method
+	)
 
-	Loads the library in question, and makes an object of the named type
+	Loads the library in question, and makes an object of the named type.
+	Supports separating module name from type name, role verification, and returning type objects.
 	=end pod
-	method	load-library(Str :$type, *%parameters) {
-		%!library-locks{$type}:exists or %!library-locks{$type} = Lock.new();
-		my $library-object = %!library-locks{$type}.protect: {
-			# Load the relevant module
-			my \M = (require ::($type));
-
-			# Create the object
-			M.new(|%parameters);
+	method	load-library(
+		Str :$type,
+		Str :$module-name,
+		Str :$does,
+		Bool :$return-type = False,
+		*%parameters
+	) {
+		# Determine which module to load
+		my $module-to-load = $module-name // $type;
+		
+		# Ensure we have a type name (for backward compatibility)
+		my $type-name = $type // $module-to-load;
+		
+		# Backward compatibility: if neither is provided, error
+		unless $module-to-load.defined {
+			die "Error: Either :module-name or :type must be provided";
 		}
-
-		without $library-object { .throw }
-
-		return $library-object;
+		
+		%!library-locks{$module-to-load}:exists or %!library-locks{$module-to-load} = Lock.new();
+		
+		my $result = %!library-locks{$module-to-load}.protect: {
+			# Load the module
+			my \M = (require ::($module-to-load));
+			
+			# If type name differs from module name, resolve it
+			my \Type = $type-name eq $module-to-load ?? M !! ::($type-name);
+			
+			# Verify role composition if specified
+			if $does.defined {
+				my \Role = ::($does);
+				unless Type.^does(Role) {
+					die "Type {Type.^name} does not do role {$does}";
+				}
+			}
+			
+			# Return type object or instance
+			if $return-type {
+				return Type;
+			} else {
+				return Type.new(|%parameters);
+			}
+		}
+		
+		without $result { .throw }
+		return $result;
 	}
 
 	method available-modules(@lib-paths = []) {
@@ -54,7 +94,7 @@ role	Implementation::Loader {
 		return @all-mods;
 	}
 
-	method load-module-pattern(:@paths = [], :@regexes = [], :@globs = []) {
+	method find-module-pattern(:@paths = [], :@regexes = [], :@globs = []) {
 		# Get the regex to use with .available-modules()
 		my @use-regexes;
 		given True {
@@ -83,10 +123,28 @@ role	Implementation::Loader {
 		for @use-regexes -> $regex {
 			@module-names.push: |@all-mods.grep($regex);
 		}
+		return @module-names;
+	}
+
+	method load-module-pattern(
+		:@paths = [], :@regexes = [], :@globs = [], :@modules = [] is copy,
+		Str :$does
+	) {
+		if ! @modules.Bool {
+			@module-names = self.find-module-pattern(:@paths, :@regexes, :@globs);
+			for @module-names -> $module-name {
+				@modules.push: {
+					module-name => $module-name,
+					type => $module-name,
+					does => $does,
+				};
+			}
+		}
+
 		my %passes;
 		my %fails;
-		for @module-names -> $module-name {
-			my $object = try self.load-library(type => $module-name);
+		for @modules -> $module {
+			my $object = try self.load-library(|%$module);
 			if $! {
 				%fails{$module-name} = $!;
 			} else {
