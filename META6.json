@@ -18,5 +18,5 @@
   "source-url": "https://github.com/wayland/raku-Abstract-Factory-Helper.git",
   "test-depends": [
   ],
-  "version": "0.0.6"
+  "version": "0.0.7"
 }
