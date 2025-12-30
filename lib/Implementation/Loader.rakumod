@@ -4,7 +4,6 @@ use	Glob::Grammar;
 use	Glob::ToRegexActions;
 
 role	Implementation::Loader {
-	has	Lock	%!load-locks;
 	has	Lock	%!library-locks;
 
 	=begin pod
@@ -51,7 +50,13 @@ role	Implementation::Loader {
 			
 			# Verify role composition if specified
 			if $does.defined {
-				my \Role = ::($does);
+				my \Role = do {
+					my $role-symbol;
+					try {
+						$role-symbol = ::($does);
+					}
+					$role-symbol // (require ::($does));
+				}
 				unless Type.^does(Role) {
 					die "Type {Type.^name} does not do role {$does}";
 				}

@@ -1,0 +1,145 @@
+#!/usr/bin/raku
+
+use	v6.d;
+
+use	lib 't/lib';
+
+use	Test;
+use	Implementation::Loader;
+use	TestRole;
+use	SimpleTest;
+use	WithParamsTest;
+use	WithRoleTest;
+use	NoRoleTest;
+use	DifferentTypeTest;
+
+class TestLoader does Implementation::Loader {}
+
+my $loader = TestLoader.new();
+
+# Calculate number of tests
+plan 24;
+
+# 1. Basic Loading Tests
+
+# Test loading with :type parameter
+{
+	my $obj = $loader.load-library(:type("SimpleTest"));
+	ok($obj ~~ SimpleTest, "Load with :type parameter");
+	ok($obj.greet eq "Hello from Simple", "Loaded object works correctly");
+}
+
+# Test loading with :module-name parameter
+{
+	my $obj = $loader.load-library(:module-name("SimpleTest"));
+	ok($obj ~~ SimpleTest, "Load with :module-name parameter");
+}
+
+# Test loading with both :type and :module-name (same values)
+{
+	my $obj = $loader.load-library(:type("SimpleTest"), :module-name("SimpleTest"));
+	ok($obj ~~ SimpleTest, "Load with both :type and :module-name (same)");
+}
+
+# Test loading with different :type and :module-name
+{
+	my $obj = $loader.load-library(:type("DifferentTypeTest"), :module-name("DifferentTypeTest"));
+	ok($obj ~~ DifferentTypeTest, "Load with different type and module name");
+}
+
+# Test error when neither parameter provided
+{
+	throws-like(
+		{ $loader.load-library() },
+		X::AdHoc,
+		message => /"Either :module-name or :type must be provided"/,
+		"Error when neither :type nor :module-name provided"
+	);
+}
+
+# 2. Type Object Returns
+
+# Test returning type object with :return-type
+{
+	my $type = $loader.load-library(:type("SimpleTest"), :return-type);
+	ok($type === SimpleTest, "Return type object with :return-type");
+	ok($type.HOW ~~ Metamodel::ClassHOW, "Returned value is a type object");
+}
+
+# Test returning instance by default
+{
+	my $obj = $loader.load-library(:type("SimpleTest"));
+	ok($obj ~~ SimpleTest, "Return instance by default");
+	ok($obj.defined, "Returned instance is defined");
+}
+
+# 3. Role Verification
+
+# Test successfully load when type does the specified role
+{
+	my $obj = $loader.load-library(:type("WithRoleTest"), :does("TestRole"));
+	ok($obj ~~ WithRoleTest, "Load with role verification (success)");
+	ok($obj ~~ TestRole, "Object does the required role");
+	ok($obj.role-method eq "Role method called", "Role methods work");
+}
+
+# Test fail when type doesn't do the role
+{
+	throws-like(
+		{ $loader.load-library(:type("NoRoleTest"), :does("TestRole")) },
+		X::AdHoc,
+		message => /"does not do role"/,
+		"Fail when type doesn't do required role"
+	);
+}
+
+# Test load without role verification when :does not provided
+{
+	my $obj = $loader.load-library(:type("NoRoleTest"));
+	ok($obj ~~ NoRoleTest, "Load without role verification");
+}
+
+# 4. Parameter Passing
+
+# Test passing parameters to .new() method
+{
+	my $obj = $loader.load-library(
+		:type("WithParamsTest"),
+		:name("TestName"),
+		:value(42)
+	);
+	ok($obj ~~ WithParamsTest, "Load with parameters");
+	ok($obj.name eq "TestName", "Parameter 'name' passed correctly");
+	ok($obj.value == 42, "Parameter 'value' passed correctly");
+	ok($obj.get-info eq "Name: TestName, Value: 42", "Parameters work in methods");
+}
+
+# Test with empty parameter hash (uses defaults)
+{
+	my $obj = $loader.load-library(:type("WithParamsTest"));
+	ok($obj ~~ WithParamsTest, "Load with no parameters (uses defaults)");
+	ok($obj.name eq "default", "Default name used");
+	ok($obj.value == 0, "Default value used");
+}
+
+# 5. Error Handling
+
+# Test handle non-existent modules gracefully
+{
+	throws-like(
+		{ $loader.load-library(:type("NonExistent::Module")) },
+		Exception,
+		"Handle non-existent module gracefully"
+	);
+}
+
+# Test that error messages are informative
+{
+	throws-like(
+		{ $loader.load-library(:type("NonExistent::Module")) },
+		Exception,
+		message => /"NonExistent" | "Module"/,
+		"Error message mentions module name"
+	);
+}
+
