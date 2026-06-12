@@ -4,6 +4,10 @@
       "zef",
       "test",
       "."
+    ],
+    "release": [
+      "bash",
+      "script/release"
     ]
   }
 }

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+MODULE=lib/Implementation/Loader.rakumod
+README=README.md
+
+echo "==> Regenerating $README from $MODULE"
+if ! raku --doc=Markdown -Ilib "$MODULE" >"$README.tmp"; then
+	rm -f "$README.tmp"
+	echo "error: raku --doc=Markdown failed (try: zef install Pod::To::Markdown)" >&2
+	exit 1
+fi
+mv "$README.tmp" "$README"
+
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	if ! git diff --quiet -- "$README"; then
+		echo "    $README was updated (not committed)."
+	fi
+fi
+
+echo "==> Running tests"
+zef test .
+
+version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' META6.json | head -1)"
+tag="v$version"
+
+echo
+echo "Release prep complete. Suggested next steps:"
+echo
+echo "  # 3. Commit any changes (e.g. regenerated README)"
+echo "  git add -A && git commit -m \"Release $version\""
+echo "  git tag $tag   # optional"
+echo
+echo "  # 4. Push to GitHub"
+echo "  git push origin main"
+echo "  git push origin $tag   # if you tagged"
+echo
+echo "  # 5. Publish to raku.land (fez / zef ecosystem)"
+echo "  fez upload"
