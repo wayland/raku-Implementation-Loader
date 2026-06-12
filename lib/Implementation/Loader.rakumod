@@ -8,18 +8,61 @@ role	Implementation::Loader {
 
 	=begin pod
 
+	=head1 NAME
+
+	Implementation::Loader - dynamically load implementation modules by name or pattern
+
+	=head1 DESCRIPTION
+
+	This role is for an interface or factory class to compose when that interface
+	has multiple implementations and the program must choose and load one at
+	runtime. The composing class gains methods to find candidate implementation
+	modules, load them, and instantiate the appropriate class.
+
+	By convention, each implementation module defines a class with the same name as
+	the module. Candidate modules can be selected by exact name or by glob patterns.
+
+	=head2 Primary use
+
+	L<load-module-pattern|#method load-module-pattern> is the usual entry point:
+	pass C<:globs> or C<:regexes> to find matching module names, then load each
+	one and collect successes and failures in two hashes.
+
+	=head1 METHODS
+
+	The methods below are documented in the order they are defined in this role.
+
+	=end pod
+
+	=begin pod
+
 	=head1 method load-library
 
-	method	load-library(
-		Str :$type,		     # The type to load, as a string
-		Str :$module-name,   # The module to load, as a string; defaults to $type
-		Str :$does,          # When the type is loaded, check if it does this role
-		Bool :$return-type = False, # Return the type object instead of an instance
-		*%parameters            # Additional parameters to pass to the type's .new() method
+	=begin code
+	method load-library(
+	    Str :$type,
+	    Str :$module-name,
+	    Str :$does,
+	    Bool :$return-type = False,
+	    *%parameters
 	)
+	=end code
+
+	=head2 Parameters
+
+	=item C<:$type> - The type to load, as a string
+	=item C<:$module-name> - The module to load, as a string; defaults to C<:$type>
+	=item C<:$does> - When the type is loaded, check if it does this role
+	=item C<:$return-type> - Return the type object instead of an instance (default C<False>)
+	=item C<*%parameters> - Additional parameters passed to the type's C<.new> method
 
 	Loads the library in question, and makes an object of the named type.
-	Supports separating module name from type name, role verification, and returning type objects.
+	When C<:$type> names a module whose main class has the same name, that class
+	is loaded and instantiated. Any additional arguments are passed to the type's
+	C<.new> method.
+
+	Supports separating module name from type name, role verification, and
+	returning type objects instead of instances.
 	=end pod
 	method	load-library(
 		Str :$type,
@@ -78,7 +121,9 @@ role	Implementation::Loader {
 
 	=head1 method available-modules
 
+	=begin code
 	method available-modules(@lib-paths = [])
+	=end code
 
 	Scans the specified library paths and installed modules to discover all available Raku modules.
 
@@ -87,7 +132,7 @@ role	Implementation::Loader {
 
 	=head2 Parameters
 
-	=item @lib-paths - An array of paths to search for .rakumod files. If empty, only installed modules are returned.
+	=item @lib-paths - An array of paths to search for .rakumod files. If empty, only installed modules are returned. Anything you declare with C<use lib 'path'> will need to be repeated here.
 
 	=head2 Why use this?
 
@@ -101,7 +146,8 @@ role	Implementation::Loader {
 	module repository chain for installed modules, giving you a comprehensive view of what's
 	available.
 
-	Note that, if you plan on filtering the modules you may be better off with find-module-pattern instead.
+	Note that, if you plan on filtering the modules you may be better off with
+	L<find-module-pattern|#method find-module-pattern> instead.
 
 	=end pod
 	method available-modules(@lib-paths = []) {
@@ -133,7 +179,9 @@ role	Implementation::Loader {
 
 	=head1 method find-module-pattern
 
+	=begin code
 	method find-module-pattern(:@paths = [], :@regexes = [], :@globs = [])
+	=end code
 
 	Finds module names that match specified patterns using either regular expressions or glob patterns.
 
@@ -206,10 +254,12 @@ role	Implementation::Loader {
 
 	=head1 method load-module-pattern
 
+	=begin code
 	method load-module-pattern(
-		:@paths = [], :@regexes = [], :@globs = [], :@modules = [] is copy,
-		Str :$does
+	    :@paths = [], :@regexes = [], :@globs = [], :@modules = [] is copy,
+	    Str :$does
 	)
+	=end code
 
 	Loads multiple modules matching specified patterns and returns a hash of successful and failed loads.
 
@@ -243,22 +293,46 @@ role	Implementation::Loader {
 	gracefully handles failures, allowing you to see which modules loaded successfully and which
 	failed, rather than stopping on the first error.
 
+	If a module matches any of the regexes or globs, this method will try to load the
+	corresponding class. See L<available-modules|#method available-modules> for how
+	the C<:@paths> option controls which directories are searched.
+
 	=head2 Example
 
 	=begin code
-	# Load all backend implementations
+	use Implementation::Loader;
+
+	class Foo does Implementation::Loader {}
+
+	my $loader = Foo.new;
+	my ($passes, $fails) = $loader.load-module-pattern(
+		:paths(['lib', 't']),
+		:globs(['Lo?derTest*']),
+	);
+	my $passing-class = $passes<LoaderTestPassing>;
+	$passing-class.the-method;
+	=end code
+
+	The glob above will try to load modules such as C<LoaderTestPassing> and
+	C<LoaderTestFailing>, and even C<LoZderTestZZZZZ>, but will ignore
+	C<IgnoredLoaderTest>. Successfully loaded objects can be used immediately,
+	as with C<LoaderTestPassing> above.
+
+	C<load-module-pattern> also accepts C<:regexes> with an array of regular
+	expressions; a module is loaded when its name matches any glob or regex.
+
+	=begin code
+	# Load all backend implementations, verifying a role
 	my (%passes, %fails) = $loader.load-module-pattern(
 		globs => ['MyApp::Backend::*'],
 		does => 'MyApp::Backend'
 	);
-	
-	# Use the successfully loaded backends
+
 	for %passes.kv -> $name, $backend {
 		say "Loaded backend: $name";
-		$backend.process();
+		$backend.process;
 	}
-	
-	# Report failures
+
 	if %fails {
 		warn "Failed to load: " ~ %fails.keys.join(', ');
 	}

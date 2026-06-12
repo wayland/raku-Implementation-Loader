@@ -15,8 +15,8 @@
   },
   "resources": [
   ],
-  "source-url": "https://github.com/wayland/raku-Abstract-Factory-Helper.git",
+  "source-url": "https://github.com/wayland/raku-Implementation-Loader.git",
   "test-depends": [
   ],
-  "version": "0.0.7"
+  "version": "0.0.8"
 }
