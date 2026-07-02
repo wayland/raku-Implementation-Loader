@@ -1,0 +1,51 @@
+#!/usr/bin/raku
+
+use v6.d;
+
+use lib 't/lib';
+
+use Test;
+use Implementation::Loader;
+
+class InstalledDiscoveryTest does Implementation::Loader {}
+
+my $loader = InstalledDiscoveryTest.new;
+
+subtest 'lib path discovery is unchanged' => {
+	plan 1;
+
+	my @mods = $loader.available-modules(['t/lib']);
+	ok 'TestModule::Simple' (elem) @mods,
+		'available-modules still finds modules under explicit lib paths';
+}
+
+subtest 'installed discovery uses provides module names' => {
+	plan 2;
+
+	my @mods = $loader.available-modules;
+	ok 'Implementation::Loader' (elem) @mods,
+		'installed provides include the loader module itself';
+	ok !@mods.grep(*.contains('--')).so,
+		'available-modules lists module FQCNs, not zef distribution names';
+}
+
+subtest 'find-module-pattern can discover installed plugin modules' => {
+	my $http-installed = $*REPO.repo-chain.grep(*.^can('installed'))
+		.map(*.installed).flat
+		.grep({ ?($_.meta<provides><Qwiratry::Location::HTTP>) }).so;
+	unless $http-installed {
+		plan skip-all => 'Qwiratry::Location::HTTP is not installed';
+	}
+	plan 2;
+
+	my @mods = $loader.find-module-pattern(
+		:globs(['Qwiratry::Location::*']),
+		:paths(['t/lib']),
+	);
+	ok 'Qwiratry::Location::HTTP' (elem) @mods,
+		'glob discovery finds installed plugin modules from provides metadata';
+	ok !('Qwiratry--Location--HTTP' (elem) @mods),
+		'distribution names are not treated as module names';
+}
+
+done-testing;

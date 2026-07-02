@@ -117,6 +117,19 @@ role	Implementation::Loader {
 		return $result;
 	}
 
+	# Installed zef distributions are named with double dashes (e.g. Qwiratry--Location--HTTP)
+	# but loadable modules live in each distribution's provides map (e.g. Qwiratry::Location::HTTP).
+	method !installed-module-names(--> List) {
+		gather for $*REPO.repo-chain.grep(*.^can('installed')) -> $repo {
+			for $repo.installed -> $dist {
+				my $provides = $dist.meta<provides> // next;
+				for $provides.keys -> $module-name {
+					take $module-name if $module-name.^name eq 'Str' && $module-name;
+				}
+			}
+		}.Array
+	}
+
 	=begin pod
 
 	=head1 method available-modules
@@ -143,8 +156,8 @@ role	Implementation::Loader {
 	=item Generate lists of available implementations for plugin systems
 
 	The method recursively searches directories for .rakumod files and also queries the Raku
-	module repository chain for installed modules, giving you a comprehensive view of what's
-	available.
+	module repository chain for installed distributions, using each distribution's C<provides>
+	metadata so plugin modules are listed by their loadable module names.
 
 	Note that, if you plan on filtering the modules you may be better off with
 	L<find-module-pattern|#method find-module-pattern> instead.
@@ -165,14 +178,9 @@ role	Implementation::Loader {
 			@lib-mods.push(|@lib-these);
 		}
 
-		my @installed = $*REPO.repo-chain
-			.grep(*.^can('installed'))
-			.map(*.installed)
-			.flat.map(*.meta<name>)
-			.grep(*.^name eq 'Str');
+		my @installed = self!installed-module-names;
 
-		my @all-mods = (@lib-mods, @installed).flat.unique.sort;
-		return @all-mods;
+		(@lib-mods, @installed).flat.unique.sort.Array;
 	}
 
 	=begin pod

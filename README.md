@@ -75,7 +75,7 @@ Use this method when you need to:
 
   * Generate lists of available implementations for plugin systems
 
-The method recursively searches directories for .rakumod files and also queries the Raku module repository chain for installed modules, giving you a comprehensive view of what's available.
+The method recursively searches directories for .rakumod files and also queries the Raku module repository chain for installed distributions, using each distribution's `provides` metadata so plugin modules are listed by their loadable module names.
 
 Note that, if you plan on filtering the modules you may be better off with [find-module-pattern](#method find-module-pattern) instead.
 

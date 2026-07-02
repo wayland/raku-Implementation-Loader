@@ -1,0 +1,35 @@
+=begin rakudoc
+
+=TITLE Changelog
+
+=SUBTITLE User-visible changes by release
+
+=head1 Overview
+
+This changelog follows the shape of Keep a Changelog, adapted to Rakudoc.
+Versions use the C<META6.json> version number and release tags use the
+C<release-x.y.z> convention.
+
+=head1 0.0.9 - 2026-07-02
+
+=head2 Fixed
+
+=item C<available-modules> now discovers installed modules from each
+distribution's C<provides> metadata instead of using zef distribution names.
+Plugin packages such as C<Qwiratry--Location--HTTP> are therefore visible to
+glob discovery as C<Qwiratry::Location::HTTP>.
+
+=head2 Changed
+
+=item C<available-modules> documentation now describes installed discovery in
+terms of distribution C<provides> entries rather than repository names alone.
+
+=head2 Added
+
+=item Private helper C<!installed-module-names> collects loadable module FQCNs
+from installed distributions.
+
+=item Tests in C<t/03-available-modules-tests.rakutest> cover lib-path discovery,
+installed C<provides> naming, and glob discovery of installed plugin modules.
+
+=end rakudoc
